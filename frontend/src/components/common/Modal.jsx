@@ -1,3 +1,4 @@
+// src/components/common/Modal.jsx
 import React, { useEffect } from 'react';
 
 const Modal = ({ 
@@ -8,42 +9,59 @@ const Modal = ({
   size = 'medium',
   showCloseButton = true 
 }) => {
+  // Handle body scroll when modal is open
   useEffect(() => {
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
     if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
 
+    // Cleanup on unmount
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
       document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Handle ESC key
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return { maxWidth: '400px' };
+      case 'large':
+        return { maxWidth: '800px' };
+      case 'extra-large':
+        return { maxWidth: '1200px' };
+      default:
+        return { maxWidth: '600px' };
     }
   };
 
-  // Inline styles to ensure modal appears correctly
   const overlayStyles = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -52,15 +70,14 @@ const Modal = ({
     padding: '1rem'
   };
 
-  const containerStyles = {
-    background: 'white',
+  const modalStyles = {
+    backgroundColor: 'white',
     borderRadius: '20px',
     width: '90%',
-    maxWidth: size === 'medium' ? '500px' : size === 'large' ? '800px' : '400px',
+    ...getSizeStyles(),
     maxHeight: '90vh',
     overflowY: 'auto',
     boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
-    border: '1px solid #e0e0e0',
     position: 'relative',
     margin: 'auto'
   };
@@ -73,7 +90,10 @@ const Modal = ({
     borderBottom: '2px solid #f0f0f0',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: 'white',
-    borderRadius: '20px 20px 0 0'
+    borderRadius: '20px 20px 0 0',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1
   };
 
   const titleStyles = {
@@ -101,14 +121,22 @@ const Modal = ({
 
   const bodyStyles = {
     padding: '2rem',
-    background: 'white'
+    maxHeight: 'calc(90vh - 200px)',
+    overflowY: 'auto'
   };
 
   return (
-    <div style={overlayStyles} onClick={handleBackdropClick}>
-      <div style={containerStyles} onClick={(e) => e.stopPropagation()}>
+    <div 
+      style={overlayStyles}
+      onClick={onClose}
+    >
+      <div 
+        style={modalStyles}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
         <div style={headerStyles}>
-          <h2 style={titleStyles}>{title}</h2>
+          <h3 style={titleStyles}>{title}</h3>
           {showCloseButton && (
             <button 
               style={closeButtonStyles}
@@ -121,12 +149,13 @@ const Modal = ({
                 e.target.style.background = 'rgba(255, 255, 255, 0.2)';
                 e.target.style.transform = 'scale(1)';
               }}
-              aria-label="Close modal"
             >
-              ✕
+              ×
             </button>
           )}
         </div>
+        
+        {/* Body */}
         <div style={bodyStyles}>
           {children}
         </div>

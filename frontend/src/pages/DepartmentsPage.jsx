@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/common/Sidebar';
 import AddDepartmentModal from '../components/departments/AddDepartmentModal';
+import AddEmployeeModal from '../components/employees/AddEmployeeModal';
 import '../styles/pages/departments.css';
 
 const DepartmentsPage = () => {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddDepartmentModal, setShowAddDepartmentModal] = useState(false);
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Initial departments data - this will be updated when new departments are added
+  // Initial departments data
   const [departments, setDepartments] = useState([
     {
       id: 1,
@@ -43,7 +46,7 @@ const DepartmentsPage = () => {
 
   // Initial employees data
   const [employees, setEmployees] = useState({
-    1: [ // Supervisors
+    1: [
       {
         id: 1,
         name: 'Alex Rodriguez',
@@ -61,9 +64,18 @@ const DepartmentsPage = () => {
         phone: '+1-555-0102',
         email: 'emily.chen@company.com',
         currentSalary: 68000
+      },
+      {
+        id: 3,
+        name: 'Robert Davis',
+        role: 'Floor Supervisor',
+        dateOfJoining: '2019-11-10',
+        phone: '+1-555-0103',
+        email: 'robert.davis@company.com',
+        currentSalary: 72000
       }
     ],
-    2: [ // Maintenance
+    2: [
       {
         id: 4,
         name: 'Carlos Martinez',
@@ -74,7 +86,7 @@ const DepartmentsPage = () => {
         currentSalary: 52000
       }
     ],
-    3: [ // Quality Check
+    3: [
       {
         id: 6,
         name: 'Ahmed Hassan',
@@ -85,7 +97,7 @@ const DepartmentsPage = () => {
         currentSalary: 55000
       }
     ],
-    4: [ // Packing
+    4: [
       {
         id: 9,
         name: 'Maria Gonzalez',
@@ -107,28 +119,29 @@ const DepartmentsPage = () => {
     currentSalary: ''
   });
 
-  // FIX: Handle body scroll when modal is open
+  // Handle body scroll when modal is open
   useEffect(() => {
-    if (showEditModal || showAddDepartmentModal) {
+    if (showEditModal || showAddDepartmentModal || showAddEmployeeModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
 
-    // Cleanup on unmount
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [showEditModal, showAddDepartmentModal]);
+  }, [showEditModal, showAddDepartmentModal, showAddEmployeeModal]);
 
   // Handle department click
   const handleDepartmentClick = (departmentId) => {
     setSelectedDepartment(departmentId);
+    setSearchTerm('');
   };
 
   // Handle back to departments
   const handleBackToDepartments = () => {
     setSelectedDepartment(null);
+    setSearchTerm('');
   };
 
   // Handle add department
@@ -141,11 +154,18 @@ const DepartmentsPage = () => {
     setShowAddDepartmentModal(false);
   };
 
-  // ✅ FIXED: Add new department to the list
+  // Handle add employee
+  const handleAddEmployee = () => {
+    setShowAddEmployeeModal(true);
+  };
+
+  // Handle close add employee modal
+  const handleCloseAddEmployeeModal = () => {
+    setShowAddEmployeeModal(false);
+  };
+
+  // Handle add new department
   const handleAddNewDepartment = (newDepartmentData) => {
-    console.log('Adding new department:', newDepartmentData); // Debug log
-    
-    // Generate new ID
     const newId = Math.max(...departments.map(d => d.id)) + 1;
     
     const newDepartment = {
@@ -156,24 +176,40 @@ const DepartmentsPage = () => {
       status: newDepartmentData.status || 'Active'
     };
     
-    // Add to departments list
-    setDepartments(prevDepartments => {
-      const updated = [...prevDepartments, newDepartment];
-      console.log('Updated departments:', updated); // Debug log
-      return updated;
-    });
-    
-    // Initialize empty employee array for new department
+    setDepartments(prevDepartments => [...prevDepartments, newDepartment]);
     setEmployees(prevEmployees => ({
       ...prevEmployees,
       [newId]: []
     }));
     
-    // Close modal
     setShowAddDepartmentModal(false);
+    alert(`Department "${newDepartmentData.name}" added successfully!`);
+  };
+
+  // Handle add new employee
+  const handleAddNewEmployee = (newEmployeeData) => {
+    const newId = Math.max(
+      ...Object.values(employees).flat().map(emp => emp.id),
+      0
+    ) + 1;
     
-    // Show success message
-    alert(`✅ Department "${newDepartmentData.name}" added successfully!`);
+    const newEmployee = {
+      id: newId,
+      name: newEmployeeData.name,
+      role: newEmployeeData.role,
+      dateOfJoining: newEmployeeData.dateOfJoining,
+      phone: newEmployeeData.phone,
+      email: newEmployeeData.email,
+      currentSalary: parseInt(newEmployeeData.currentSalary)
+    };
+    
+    setEmployees(prev => ({
+      ...prev,
+      [selectedDepartment]: [...(prev[selectedDepartment] || []), newEmployee]
+    }));
+    
+    setShowAddEmployeeModal(false);
+    alert(`Employee "${newEmployeeData.name}" added successfully!`);
   };
 
   // Handle delete employee
@@ -246,6 +282,19 @@ const DepartmentsPage = () => {
     });
   };
 
+  // Filter employees based on search term
+  const getFilteredEmployees = () => {
+    const departmentEmployees = employees[selectedDepartment] || [];
+    if (!searchTerm) return departmentEmployees;
+
+    return departmentEmployees.filter(employee =>
+      employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.phone.includes(searchTerm) ||
+      employee.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
   // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -285,7 +334,7 @@ const DepartmentsPage = () => {
   };
 
   const selectedDeptName = departments.find(dept => dept.id === selectedDepartment)?.name;
-  const departmentEmployees = employees[selectedDepartment] || [];
+  const filteredEmployees = getFilteredEmployees();
 
   return (
     <div className="departments-layout">
@@ -352,16 +401,59 @@ const DepartmentsPage = () => {
               <div className="employees-section">
                 <div className="employees-header">
                   <h2>Employees in {selectedDeptName}</h2>
-                  <p>{departmentEmployees.length} employee{departmentEmployees.length !== 1 ? 's' : ''} found</p>
+                  
+                  {/* Search and Add Employee Controls */}
+                  <div className="employees-controls">
+                    {/* Search Bar */}
+                    <div className="search-bar">
+                      <input
+                        type="text"
+                        placeholder="Search employees by name, email, phone, or role..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                      />
+                      <span className="search-icon">🔍</span>
+                    </div>
+                    
+                    {/* Add Employee Button */}
+                    <button 
+                      className="add-employee-btn"
+                      onClick={handleAddEmployee}
+                    >
+                      <span className="btn-icon">➕</span>
+                      Add Employee
+                    </button>
+                  </div>
+                  
+                  <p>{filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''} found</p>
                 </div>
 
-                {departmentEmployees.length === 0 ? (
+                {filteredEmployees.length === 0 ? (
                   <div className="no-employees">
-                    <p>No employees found in this department.</p>
+                    <p>{searchTerm ? 'No employees match your search criteria.' : 'No employees found in this department.'}</p>
+                    {searchTerm && (
+                      <button 
+                        className="clear-search-btn"
+                        onClick={() => setSearchTerm('')}
+                      >
+                        Clear Search
+                      </button>
+                    )}
+                    {!searchTerm && (
+                      <button 
+                        className="add-employee-btn"
+                        onClick={handleAddEmployee}
+                        style={{ marginTop: '1rem' }}
+                      >
+                        <span className="btn-icon">➕</span>
+                        Add First Employee
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="employees-grid">
-                    {departmentEmployees.map(employee => (
+                    {filteredEmployees.map(employee => (
                       <div key={employee.id} className="employee-card">
                         <div className="employee-header">
                           <div className="employee-avatar">
@@ -415,7 +507,7 @@ const DepartmentsPage = () => {
               </div>
             )}
 
-            {/* FIX: Edit Employee Modal with proper positioning */}
+            {/* Edit Employee Modal */}
             {showEditModal && (
               <div 
                 className="modal-overlay" 
@@ -698,7 +790,16 @@ const DepartmentsPage = () => {
         </div>
       </div>
 
-      {/* ✅ FIXED: Add Department Modal with correct prop */}
+      {/* Add Employee Modal */}
+      <AddEmployeeModal
+        isOpen={showAddEmployeeModal}
+        onClose={handleCloseAddEmployeeModal}
+        onAddEmployee={handleAddNewEmployee}
+        departmentId={selectedDepartment}
+        departmentName={selectedDeptName}
+      />
+
+      {/* Add Department Modal */}
       <AddDepartmentModal
         isOpen={showAddDepartmentModal}
         onClose={handleCloseAddDepartmentModal}
